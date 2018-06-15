@@ -1,4 +1,4 @@
-# conversation_dynamics
+# Conversation Dynamics
 SFI Complex System Summer School project
 
 Aim: explore the dynamics of natural language conversations into opinion space.
