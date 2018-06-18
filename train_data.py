@@ -18,30 +18,29 @@ arguments", plus an 11th entry for the each argument as summarized by Wikipedia.
 Websites were filtered based on their content: e.g. some pro life arguments 
 came after querying for pro choice. Or e.g. some websites had both arguments 
 summarized."""
-against=[]
-pro=[]
+texts=[]
 for w in range(10):
-    against.append(open('./data_files/abortion/against/web' + str(w+1) + '.txt', 'r').read())
-    pro.append(open('./data_files/abortion/pro/web' + str(w+1) + '.txt', 'r').read())
+    texts.append(open('./data_files/abortion/against/web' + str(w+1) + '.txt', 'r').read())
+for w in range(10):
+    texts.append(open('./data_files/abortion/pro/web' + str(w+1) + '.txt', 'r').read())
     
 #%% clean doc
 from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer
 import string
 import re
+from pprint import pprint  # pretty-printer
 
 # strip trailing symbols
-against = [doc.replace('\n','') for doc in against]
-pro = [doc.replace('\n','') for doc in pro]
+texts = [doc.replace('\n','') for doc in texts]
 # remove double quotes
-against = [doc.replace('“','"').replace('”','"').replace('"','').replace('’',' ').replace('—',' ') for doc in against]
-pro = [doc.replace('“','"').replace('”','"').replace('"','').replace('’',' ').replace('—',' ') for doc in pro]
+texts = [doc.replace('—',' ').replace('–',' ') for doc in texts]
 # remove numbers
-against = [re.sub(r'\d+', '', doc) for doc in against]
-pro = [re.sub(r'\d+', '', doc) for doc in pro]
-
+texts = [re.sub(r'\d+', '', doc) for doc in texts]
+        
+# remove punctuation and stopwords
 stop = set(stopwords.words('english'))
-exclude = set(string.punctuation)
+exclude = set(string.punctuation) | set('“”"’')
 lemma = WordNetLemmatizer()
 def clean(doc):
     stop_free = " ".join([i for i in doc.lower().split() if i not in stop])
@@ -49,43 +48,44 @@ def clean(doc):
     normalized = " ".join(lemma.lemmatize(word) for word in punc_free.split())
     return normalized
 
-against_clean = [clean(doc).split() for doc in against]  
-pro_clean = [clean(doc).split() for doc in pro]  
+# tokenize docs
+texts_clean = [clean(doc).split() for doc in texts]  
 
 # remove non english words
 words = set(nltk.corpus.words.words())
-for i,doc in enumerate(against_clean):
-    against_clean[i] = [w for w in doc if w in words or not w.isalpha()]
-for i,doc in enumerate(pro_clean):
-    pro_clean[i] = [w for w in doc if w in words or not w.isalpha()]
+for i,doc in enumerate(texts_clean):
+    texts_clean[i] = [w for w in doc if w in words or not w.isalpha()]
 
 # this is useless...
-against_corpus = list(itertools.chain.from_iterable(against_clean))
-pro_corpus = list(itertools.chain.from_iterable(pro_clean))
+texts_corpus = list(itertools.chain.from_iterable(texts_clean))
 
 #%% 
 # Importing Gensim
-from gensim import corpora
+from gensim import corpora, models, similarities
 
 #Creating the term dictionary of our courpus, where every unique term 
 #is assigned an index. 
-dictionary = corpora.Dictionary([[against_corpus],[pro_corpus]]) # THIS IS NOT WORKING
+dictionary_against = corpora.Dictionary(texts_clean[0:10]) 
+dictionary_pro = corpora.Dictionary(texts_clean[11:-1]) 
 # Converting list of documents (corpus) into Document Term Matrix using 
 # dictionary prepared above.
-doc_term_matrix = [dictionary.doc2bow(doc) for doc in against_clean]
+corpus_against = [dictionary.doc2bow(doc) for doc in texts_clean[0:10]]
+corpus_pro = [dictionary.doc2bow(doc) for doc in texts_clean[11:-1]]
 
-#%% WORK TO DO HERE
-# Holds token ids which appears only once.
-unique_ids = [
-    token_id for token_id, frequency in dictionary.dfs.items() if frequency == 1
-]
-freqs = [frequency for token_id, frequency in dictionary.dfs.items()]
+# topic modelling
+corpus = corpus_against # switch this to pro depending on what opinion you want to model
+dictionary = dictionary_against # switch this to pro depending on what opinion you want to model
+# initialize a model
+tfidf = models.TfidfModel(corpus) 
+corpus_tfidf = tfidf[corpus]
+#for doc in corpus_tfidf:
+#    print(doc)
 
-# Filters out tokens which appears only once.
-dictionary.filter_tokens(unique_ids)
-
-# Compactifies.
-dictionary.compactify()
+# initialize an LSI transformation
+lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=1)
+# create a double wrapper over the original corpus: bow->tfidf->fold-in-lsi
+corpus_lsi = lsi[corpus_tfidf]
+lsi.print_topics(1)
 
 #%% TO DO
 """
