@@ -31,13 +31,16 @@ import string
 import re
 from pprint import pprint  # pretty-printer
 
+# remove urls
+texts = [re.sub(r"http\S+", "", doc) for doc in texts]
+texts = [' '.join(item for item in doc.split() if not (item.startswith('www.')))  for doc in texts]
 # strip trailing symbols
 texts = [doc.replace('\n','') for doc in texts]
 # remove double quotes
 texts = [doc.replace('—',' ').replace('–',' ') for doc in texts]
 # remove numbers
 texts = [re.sub(r'\d+', '', doc) for doc in texts]
-        
+    
 # remove punctuation and stopwords
 stop = set(stopwords.words('english'))
 exclude = set(string.punctuation) | set('“”"’')
