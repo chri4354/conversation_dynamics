@@ -40,12 +40,15 @@ def load_page(subreddit):
     return links
     
     
-def get_data(text,f,df_old):
+def get_data(text,df_old):
     cols = ["iscom", "title", "user", "level", "points", "body"]
     html = bs.BeautifulSoup(text,"lxml")
     
     # concatenate main submission
-    title = html.find("h2",{"class": re.compile(".*fvdpbH.*")}).text
+    try:
+        title = html.find("h2",{"class": re.compile(".*fvdpbH.*")}).text
+    except:
+        title=''
     iscom = False
     level = 0
     try:
@@ -100,14 +103,13 @@ def get_data(text,f,df_old):
 #driver = selenium.webdriver.Firefox()
 driver = selenium.webdriver.Chrome(executable_path="/usr/local/bin/chromedriver")
 subreddit = 'prolife'
-filename = "./results_" + subreddit + ".csv"
+filename = "./results_" + subreddit + ".pkl"
 links = load_page(subreddit)
 df = pd.DataFrame()
-with open(filename,"w+") as f:
-    for i,link in enumerate(links):
-        url = "https://www.reddit.com" + link
-        driver.get(url)
-        df = get_data(driver.page_source,f,df)
-        print('size in MB ', df.memory_usage().sum()/1e6)
+for i,link in enumerate(links):
+    url = "https://www.reddit.com" + link
+    driver.get(url)
+    df = get_data(driver.page_source,df)
+    print('size in MB ', df.memory_usage().sum()/1e6)
         
-pd.to_pickle(df, 'prolife.pkl')
+pd.to_pickle(df, filename)
