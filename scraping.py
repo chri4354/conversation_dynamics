@@ -14,8 +14,7 @@ import re
 import numpy as np
 import pandas as pd
 #%% define functions
-def load_page(subreddit):
-    url = "https://www.reddit.com/r/" + subreddit
+def scroll_down(url):
     driver.get(url)
     SCROLL_PAUSE_TIME = 1
     time.sleep(5)
@@ -31,6 +30,11 @@ def load_page(subreddit):
         if new_height == last_height:
             break
         last_height = new_height
+    return
+
+def load_page(subreddit):
+    url = "https://www.reddit.com/r/" + subreddit
+    scroll_down(url)
     soup = bs.BeautifulSoup(driver.page_source,"html.parser")
     links = []
     for link in soup.find_all("a",{"data-click-id":"body"}):
@@ -102,13 +106,13 @@ def get_data(text,df_old):
 # %% run 
 #driver = selenium.webdriver.Firefox()
 driver = selenium.webdriver.Chrome(executable_path="/usr/local/bin/chromedriver")
-subreddit = 'prolife'
+subreddit = 'changemyview'
 filename = "./results_" + subreddit + ".pkl"
 links = load_page(subreddit)
 df = pd.DataFrame()
 for i,link in enumerate(links):
     url = "https://www.reddit.com" + link
-    driver.get(url)
+    scroll_down(url)
     df = get_data(driver.page_source,df)
     print('size in MB ', df.memory_usage().sum()/1e6)
         
