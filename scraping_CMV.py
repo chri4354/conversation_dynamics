@@ -5,7 +5,7 @@ Created on Tue Jun 19 13:49:37 2018
 @author: niccolop
 """
 import os
-os.chdir('/home/niccolop/Dropbox (MIT)/csss2018/conversation_dynamics')
+os.chdir('/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_dynamics')
 
 import selenium.webdriver
 import bs4 as bs
@@ -13,13 +13,22 @@ import time
 import re
 import numpy as np
 import pandas as pd
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import StaleElementReferenceException
+
+            
 #%% define functions
 def scroll_down(url):
     driver.get(url)
     SCROLL_PAUSE_TIME = 1
-    time.sleep(5)
+    time.sleep(SCROLL_PAUSE_TIME)
     # Get scroll height
     last_height = driver.execute_script("return document.body.scrollHeight")
+
+
     while True:
         # Scroll down to bottom
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -30,7 +39,16 @@ def scroll_down(url):
         if new_height == last_height:
             break
         last_height = new_height
-    return
+        
+    attempts = 0
+    while attempts < 5:
+        try:
+            element = driver.find_element_by_css_selector("[id*=moreComments]")
+            element.click()
+            attempts = 0
+            time.sleep(SCROLL_PAUSE_TIME)
+        except:
+            attempts += 1
 
 def load_page(subreddit):
     url = "https://www.reddit.com/r/" + subreddit
@@ -106,9 +124,14 @@ def get_data(text,df_old):
 # %% run 
 #driver = selenium.webdriver.Firefox()
 driver = selenium.webdriver.Chrome(executable_path="/usr/local/bin/chromedriver")
+driver.implicitly_wait(10)
+wait = WebDriverWait(driver,10)
 subreddit = 'changemyview'
 filename = "./results_" + subreddit + ".pkl"
-links = load_page(subreddit)
+#links = load_page(subreddit)
+#add ?sort=new to links
+links = ['/r/changemyview/comments/5m17gg/cmv_prochoice_and_prolife_stances_are_both/?sort=new']
+
 df = pd.DataFrame()
 for i,link in enumerate(links):
     url = "https://www.reddit.com" + link
@@ -117,3 +140,9 @@ for i,link in enumerate(links):
     print('size in MB ', df.memory_usage().sum()/1e6)
         
 pd.to_pickle(df, filename)
+driver.quit()
+
+
+
+
+

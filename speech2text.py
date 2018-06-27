@@ -19,24 +19,39 @@ Requires:
 
 """
 
-
+import time
 import speech_recognition as sr
+import pandas as pd
 
 #%%
-
 r = sr.Recognizer()
 mic = sr.Microphone()
 mics = sr.Microphone.list_microphone_names() # print list of mics
-mic = sr.Microphone(device_index=mics.index('default'))
+mic = sr.Microphone(device_index=mics.index('sysdefault'))
 
+with mic as source:    
+    print('silence please.') 
+    r.adjust_for_ambient_noise(source, )
+
+text = []
+stop = False
+df = pd.DataFrame()
 # start recording until silence is detected
-with mic as source:
+while stop==False:
+    with mic as source:
+        try:
+            print('Listening...')
+            audio = r.listen(source)
+        except (KeyboardInterrupt, SystemExit):
+            print('Keyboard iterrupt')
+            stop=True
+    # translate recording to text 
     try:
-        r.adjust_for_ambient_noise(source)
-        audio = r.listen(source)
-        transcribed text = r.recognize_google(audio)
+        text.append(r.recognize_google(audio))
+        pd.DataFrame(text).to_csv('realtime_conversation.csv')
+        print('got it.')
     except sr.UnknownValueError:
         # speech was unintelligible
         print("Sorry, Unable to recognize speech")
 
-
+print(text)
