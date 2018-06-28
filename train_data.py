@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import nltk 
+from gensim import corpora, models
 
 #%% load data 
 """
@@ -29,51 +30,52 @@ from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer
 import string
 import re
-from pprint import pprint  # pretty-printer
 
-# remove urls
-texts = [re.sub(r"http\S+", "", doc) for doc in texts]
-texts = [' '.join(item for item in doc.split() if not (item.startswith('www.')))  for doc in texts]
-# strip trailing symbols
-texts = [doc.replace('\n','') for doc in texts]
-# remove double quotes
-texts = [doc.replace('—',' ').replace('–',' ') for doc in texts]
-# remove numbers
-texts = [re.sub(r'\d+', '', doc) for doc in texts]
+def clean_data(texts):
+    # remove punctuation and stopwords
+    stop = set(stopwords.words('english')) | set(['would','could', 'it', 'thats'])
+    exclude = set(string.punctuation) | set('“”"’')
+    lemma = WordNetLemmatizer()
+    # english words
+    words = set(nltk.corpus.words.words())
+
+    texts_clean = []
+    tokens = []
+    for i,doc in enumerate(texts):
+#        break
+        # remove urls
+        doc = re.sub(r"http\S+", "", doc) 
+        doc = ' '.join(item for item in doc.split() if not (item.startswith('www.')))
+        # strip trailing symbols
+        doc = doc.replace('\n','')
+        # remove double hyphens
+        doc = doc.replace('—',' ').replace('–',' ')
+        # remove numbers
+        doc = re.sub(r'\d+', '', doc)
+        # remove punctuation
+        doc = " ".join([i for i in doc.lower().split() if i not in stop])
+        doc = ''.join(ch for ch in doc if ch not in exclude)
+        doc = " ".join(lemma.lemmatize(word) for word in doc.split())
+        # clean text
+        texts_clean.append(doc)
+        # tokenize docs
+        tokens.append(doc.split())
+        tokens[i] = [w for w in tokens[i] if w in words or not w.isalpha()]
     
-# remove punctuation and stopwords
-stop = set(stopwords.words('english'))
-exclude = set(string.punctuation) | set('“”"’')
-lemma = WordNetLemmatizer()
-def clean(doc):
-    stop_free = " ".join([i for i in doc.lower().split() if i not in stop])
-    punc_free = ''.join(ch for ch in stop_free if ch not in exclude)
-    normalized = " ".join(lemma.lemmatize(word) for word in punc_free.split())
-    return normalized
-
-# tokenize docs
-texts_clean = [clean(doc).split() for doc in texts]  
-
-# remove non english words
-words = set(nltk.corpus.words.words())
-for i,doc in enumerate(texts_clean):
-    texts_clean[i] = [w for w in doc if w in words or not w.isalpha()]
-
-# this is useless...
-texts_corpus = list(itertools.chain.from_iterable(texts_clean))
-
+    return texts_clean, tokens
+    
 #%% 
-# Importing Gensim
-from gensim import corpora, models, similarities
+texts_clean, tokens = clean_data(texts)
 
 #Creating the term dictionary of our courpus, where every unique term 
 #is assigned an index. 
-dictionary_against = corpora.Dictionary(texts_clean[0:10]) 
-dictionary_pro = corpora.Dictionary(texts_clean[11:-1]) 
+dictionary_against = corpora.Dictionary(tokens[0:10]) 
+dictionary_pro = corpora.Dictionary(tokens[11:-1]) 
 # Converting list of documents (corpus) into Document Term Matrix using 
 # dictionary prepared above.
-corpus_against = [dictionary.doc2bow(doc) for doc in texts_clean[0:10]]
-corpus_pro = [dictionary.doc2bow(doc) for doc in texts_clean[11:-1]]
+dictionary = dictionary_against
+corpus_against = [dictionary.doc2bow(doc) for doc in tokens[0:10]]
+corpus_pro = [dictionary.doc2bow(doc) for doc in tokens[11:-1]]
 
 # topic modelling
 corpus = corpus_against # switch this to pro depending on what opinion you want to model
@@ -93,5 +95,4 @@ lsi.print_topics(1)
 #%% TO DO
 """
 - kl divergence (or other similarity measure) between against and pro corpora
-- automate reddit scraping
 """
