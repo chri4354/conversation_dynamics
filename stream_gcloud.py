@@ -156,6 +156,8 @@ def listen_print_loop(responses,mf):
         else:
             print(transcript + overwrite_chars)
             mf.write(str((transcript + overwrite_chars)))
+            mf.write("\n")
+            mf.flush()
 
             # Exit recognition if any of the transcribed phrases could be
             # one of our keywords.
