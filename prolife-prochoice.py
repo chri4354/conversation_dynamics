@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 
+#------------------------------------------------------------------------------+
+#
+#
+#   Varying a sentence by synonyms
+#   2018-June.
+#   Contributors:
+#   1. Nam Le -- University College Dublin
+#   2. 
+#   3. 
+#
+#------------------------------------------------------------------------------+
+
 #------ Processing the labels of the raw abortion data --------+
 import os
 
