@@ -1,6 +1,5 @@
 # jonashaslbeck@gmail.com; June 2018
 
-
 library(qgraph)
 library(igraph)
 library(readr)
@@ -10,10 +9,10 @@ library(readr)
 # ------------------------------------------------------------------------------
 
 ## CMV Data
-fileDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_dynamics_local/target_conversations/"
-D <- read_tsv(paste0(fileDir, "cmv2017.txt"))
+dataDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/CD_data/"
+mainDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_dynamics/target_conversations/"
+D <- read_tsv(paste0(dataDir, "cmv2017.txt"))
 dim(D)
-
 
 # ------------------------------------------------------------------------------
 # ---------- Make Recursive Child Finder ---------------------------------------
@@ -94,11 +93,11 @@ ChildFinder <- function(inlist) {
 
 
 # ------------------------------------------------------------------------------
-# ---------- Global Settings -----------------------------------------------------------
+# ---------- Global Settings ---------------------------------------------------
 # ------------------------------------------------------------------------------
 
 ## Select Threads
-df_simon <- read_csv(paste0(fileDir, "CMV_TopAbortionThread.csv"))
+df_simon <- read_csv(paste0(mainDir, "CMV_TopAbortionThread.csv"))
 target_cmvs <- df_simon$url[1:10]
 n_cmv <- length(target_cmvs)
 
@@ -146,7 +145,7 @@ for(j in (1:n_cmv)[-7]) {
   
   # ---------- 2) Visualize Tree ----------------------------------------
   
-  pdf(paste0(fileDir, "/output_trees/cmv", j,".pdf"), width = 10, height = 7)
+  pdf(paste0(mainDir, "/output_trees/cmv", j,".pdf"), width = 10, height = 7)
   qgraph(out$graph, 
          # labels = out$v_ids_out, 
          labels = out$v_author, 
@@ -165,7 +164,7 @@ for(j in (1:n_cmv)[-7]) {
   
   for(i in 2:n) {
     l_chains[[i]] <- as.numeric(all_simple_paths(out_igraph, 1, i)[[1]])
-    print(i)
+    # print(i)
   }
   
   # Check out distribution of chain lengths
@@ -184,11 +183,11 @@ for(j in (1:n_cmv)[-7]) {
     
     D_ss <- D[out$orig_rows[l_chains[[longest_k[i]]]] , ]
     D_ss_out <- cbind(D_ss$author, D_ss$score, D_ss$body)
-    D_ss_out[1, 2] <- D_ss$selftext[1]
+    D_ss_out[1, 3] <- D_ss$selftext[1]
     
     colnames(D_ss_out) <- c("author", "score", "body")
     
-    write.table(D_ss_out, file = paste0(fileDir, "output_chains/cmv" ,j ,"_chain" ,i ,".tsv"), 
+    write.table(D_ss_out, file = paste0(mainDir, "output_chains/cmv" ,j ,"_chain" ,i ,".tsv"), 
                 sep = "\t", row.names=FALSE)
      
   } # end for: chains
@@ -221,10 +220,10 @@ for(j in (1:n_cmv)[-7]) {
 # ---------- Troubleshooting ---------------------------------------------------
 # ------------------------------------------------------------------------------
 
-D_debug <- D[out$orig_rows, ]
-
-write.table(D_debug, file = paste0(fileDir, "output/Debug_all274.csv"), 
-            sep = ",", row.names=FALSE)
+# D_debug <- D[out$orig_rows, ]
+# 
+# write.table(D_debug, file = paste0(fileDir, "output/Debug_all274.csv"), 
+#             sep = ",", row.names=FALSE)
 
 
 
