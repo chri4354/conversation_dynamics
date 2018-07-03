@@ -12,7 +12,6 @@ library(readr)
 dataDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/CD_data/"
 mainDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_dynamics/target_conversations/"
 D <- read_tsv(paste0(dataDir, "cmv2017.txt"))
-dim(D)
 
 # ------------------------------------------------------------------------------
 # ---------- Make Recursive Child Finder ---------------------------------------
@@ -156,40 +155,52 @@ for(j in (1:n_cmv)[-7]) {
   
   
   # ---------- 3) Export k longest Chains ----------------------------------------
-
+  
   # Get all Chains
   n <- ncol(out$graph)
-  l_chains <- list()
-  out_igraph <- graph_from_adjacency_matrix(out$graph)
+  graph_cut <- out$graph
+  id_cut <- out$v_ids_out
+  k_chains <- list()
   
-  for(i in 2:n) {
-    l_chains[[i]] <- as.numeric(all_simple_paths(out_igraph, 1, i)[[1]])
-    # print(i)
+  for(ki in 1:k) {
+    
+    # make igraph object
+    graph_cut_igraph <- graph_from_adjacency_matrix(graph_cut)
+    n_cut <- ncol(graph_cut)
+    
+    # extract longest chain
+    l_chains <- list()
+    for(i in 2:n_cut) {
+      chain <- all_simple_paths(graph_cut_igraph, 1, i)
+      if(length(chain)>0) {
+        l_chains[[i]] <- as.numeric(chain[[1]]) 
+      } else {
+        l_chains[[i]] <- NULL
+      }
+    } 
+    chain_dist <- unlist(lapply(l_chains, length))
+    ind_ord <- order(chain_dist, decreasing = TRUE)
+    k_chains[[ki]] <- id_cut[l_chains[[ind_ord[1]]]] # save longest chain
+    
+    # cut longest chain from graph & update graph
+    cut <- l_chains[[ind_ord[1]]][-1]
+    graph_cut <- graph_cut[-cut, -cut]
+    id_cut <- id_cut[-cut]
+    
   }
-  
-  # Check out distribution of chain lengths
-  chain_dist <- unlist(lapply(l_chains, length))
-  hist(chain_dist)
-  
-  ind_ord <- order(chain_dist, decreasing = TRUE)
-  chain_dist_order <- chain_dist[ind_ord]
-
-  # Select longest 10 chains
-  longest_k <- ind_ord[1:k]
-  
   
   # Export k chains
   for(i in 1:k) {
     
-    D_ss <- D[out$orig_rows[l_chains[[longest_k[i]]]] , ]
-    D_ss_out <- cbind(D_ss$author, D_ss$score, D_ss$body)
-    D_ss_out[1, 3] <- D_ss$selftext[1]
-    
-    colnames(D_ss_out) <- c("author", "score", "body")
-    
+    D_ss <- D[D$id %in% k_chains[[i]], ]
+    deltas <- as.numeric(gsub("([0-9]+).*$", "\\1", D_ss$author_flair_text))
+    D_ss_out <- cbind(D_ss$id, D_ss$author, deltas, D_ss$body)
+    D_ss_out[1, 4] <-  D_ss$selftext[1]
+    colnames(D_ss_out) <- c("id", "author", "deltas", "body")
+
     write.table(D_ss_out, file = paste0(mainDir, "output_chains/cmv" ,j ,"_chain" ,i ,".tsv"), 
                 sep = "\t", row.names=FALSE)
-     
+    
   } # end for: chains
   
   
