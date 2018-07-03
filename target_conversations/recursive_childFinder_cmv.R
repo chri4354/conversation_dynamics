@@ -91,7 +91,6 @@ ChildFinder <- function(inlist) {
 } # EoF
 
 
-
 # ------------------------------------------------------------------------------
 # ---------- Global Settings ---------------------------------------------------
 # ------------------------------------------------------------------------------
@@ -106,8 +105,9 @@ k <- 10
 
 
 # ------------------------------------------------------------------------------
-# ---------- Loop over CMVs: Create graph & Extract Chains ---------------------
+# ---------- Loop over CMVs: Create tree ---------------------------------------
 # ------------------------------------------------------------------------------
+
 
 for(j in (1:n_cmv)[-7]) {
   
@@ -152,6 +152,27 @@ for(j in (1:n_cmv)[-7]) {
   mtext(target_cmv, 3, cex=1, line=3)
   dev.off()
   
+  # Save Graph
+  saveRDS(out, file=paste0(mainDir, "files/cmv_", j, "_graph.RDS"))
+  
+  # progress:
+  print(j)
+  
+  
+} # end for: cmv
+
+
+
+
+# ------------------------------------------------------------------------------
+# ---------- Loop over CMVs: Extract Chains/Full trees/InitialAuthor -----------
+# ------------------------------------------------------------------------------
+
+for(j in (1:n_cmv)[-7]) {  
+  
+  # Load Tree data
+  out <- readRDS(file=paste0(mainDir, "files/cmv_", j, "_graph.RDS"))
+  
   # ---------- 3) Export data of whole Tree ----------------------------------------
   
   # ----- 3.1) Whole Tree ----
@@ -167,8 +188,10 @@ for(j in (1:n_cmv)[-7]) {
   colnames(D_ss_out) <- c("id", "author", "deltas", "body")
   
   # Save 
-  write.table(D_ss_out, file = paste0(mainDir, "output_trees/cmv" ,j ,"_fulltree.tsv"), 
-              sep = "\t", row.names=FALSE)
+  write.table(D_ss_out, 
+              file = paste0(mainDir, "output_trees/cmv" ,j ,"_fulltree.tsv"), 
+              sep = "\t", 
+              row.names=FALSE)
   
   
   # ----- 3.2) Initial Author Data ----
@@ -187,8 +210,10 @@ for(j in (1:n_cmv)[-7]) {
   colnames(D_author_out) <- c("id", "author", "deltas", "body")
   
   # Save 
-  write.table(D_author_out, file = paste0(mainDir, "output_initialauthors/cmv", j, "_initialauthor.tsv"), 
-              sep = "\t", row.names=FALSE)
+  write.table(D_author_out, 
+              file = paste0(mainDir, "output_initialauthors/cmv", j, "_initialauthor.tsv"), 
+              sep = "\t", 
+              row.names=FALSE)
   
   
   
@@ -239,12 +264,11 @@ for(j in (1:n_cmv)[-7]) {
     D_ss_out <- cbind(D_ss$id, D_ss$author, deltas, D_ss$body)
     D_ss_out[1, 4] <-  D_ss$selftext[1]
     colnames(D_ss_out) <- c("id", "author", "deltas", "body")
-
+    
     write.table(D_ss_out, file = paste0(mainDir, "output_chains/cmv" ,j ,"_chain" ,i ,".tsv"), 
                 sep = "\t", row.names=FALSE)
     
   } # end for: chains
-  
   
   # progress:
   print(j)

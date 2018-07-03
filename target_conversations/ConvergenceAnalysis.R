@@ -44,7 +44,8 @@ for(i in 1:n_chains) {
     l_slopes[[i]] <- NULL
   }
   
-}
+} # end for: cmv
+
 
 v_slopes <- unlist(l_slopes)
 length(v_slopes)
@@ -53,5 +54,6 @@ pdf(paste0(figDir, "hist_slopes.pdf"), width = 5, height = 4)
 hist(v_slopes, main="slope: SD(opinion) predicted by time", xlab="slope value")
 dev.off()
 
+# t-test against H0: slope=0
 t.test(v_slopes)
 

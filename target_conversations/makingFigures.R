@@ -10,16 +10,20 @@ figDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_d
 # ---------- Load All Chain Data + Predictions ---------------------------------
 # ------------------------------------------------------------------------------
 
-dataDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_dynamics/target_conversations/output_chains/"
-files <- list.files(dataDir)
-ind_withscores <- grepl("score", files)
-files <- files[ind_withscores] 
-n_files <- length(files)
 
 
 # ------------------------------------------------------------------------------
 # ---------- Pictures of individual Chains -------------------------------------
 # ------------------------------------------------------------------------------
+
+
+# -------- Load Data for Chains ------------------------------------------------
+
+dataDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_dynamics/target_conversations/output_chains/"
+
+
+# -------- Plotting ------------------------------------------------------------
+
 
 library(plotrix)
 library(RColorBrewer)
@@ -155,7 +159,48 @@ saveRDS(l_allChains, file=paste0(mainDir, "files/ChainSummary.RDS"))
 # ---------- Pictures of whole trees -------------------------------------------
 # ------------------------------------------------------------------------------
 
+# -------- Load Data for Trees ------------------------------------------------
 
+dataDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_dynamics/target_conversations/output_trees/"
+
+
+
+# -------- Plotting ------------------------------------------------------------
+
+library(RColorBrewer)
+
+
+for(cmv in (1:10)[-7]) {
+  
+  # Load Tree data
+  D <- fread(paste0(dataDir, "cmv", cmv, "_fulltree_score.tsv"))
+  n <- length(D$median_scores)
+  
+  # Load Tree structure
+  
+  
+  # Construct color scheme
+  
+  
+  # plot graph
+  qgraph()
+  
+  
+  
+}
+
+
+####### DEVVVV
+
+library(grDevices)
+
+layout(matrix(1:2,ncol=2), width = c(2,1),height = c(1,1))
+plot(1:20, 1:20, pch = 19, cex=2, col = colfunc(20))
+
+legend_image <- as.raster(matrix(colfunc(20), ncol=1))
+plot(c(0,2),c(0,1),type = 'n', axes = F,xlab = '', ylab = '', main = 'legend title')
+text(x=1.5, y = seq(0,1,l=5), labels = seq(0,1,l=5))
+rasterImage(legend_image, 0, 0, 1,1)
 
 
 
@@ -163,6 +208,12 @@ saveRDS(l_allChains, file=paste0(mainDir, "files/ChainSummary.RDS"))
 # ---------- Pictures of CMV Author opinions -----------------------------------
 # ------------------------------------------------------------------------------
 
+# -------- Load Data for Initial Authors ---------------------------------------
+
+dataDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_dynamics/target_conversations/output_initialauthors/"
+
+
+# -------- Plotting ------------------------------------------------------------
 
 
 
