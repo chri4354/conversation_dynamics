@@ -15,10 +15,6 @@ ind_withscores <- grepl("score", files)
 files <- files[ind_withscores] 
 n_files <- length(files)
 
-l_data <- list()
-for(i in 1:n_files) l_data[[i]] <- fread(paste0(dataDir, files[i]))
-
-
 # ------------------------------------------------------------------------------
 # ---------- Load All Chain Data + Predictions ---------------------------------
 # ------------------------------------------------------------------------------
@@ -47,11 +43,12 @@ for(cmv in (1:10)[-7]) {
     cols <- brewer.pal(n_authors, "Paired")
     
     # compute changing opinions
-    m_opinion <- matrix(NA, ncol=n_authors, nrow = n)
+    m_opinion <- m_dp <- matrix(NA, ncol=n_authors, nrow = n)
     for(a in 1:n_authors) {
       for(i in 1:n) {
         if(D$author[i] == unique_authors[a]) {
           m_opinion[i, a] <- D$median_scores[i]
+          m_dp[i, a] <- 1
         } else {
           if(i!=1) m_opinion[i, a] <- m_opinion[i-1, a]
         }
@@ -114,7 +111,13 @@ for(cmv in (1:10)[-7]) {
     
     for(a in 1:n_authors)  {
       lines(seq(0, 1, length=n), m_opinion[, a], col=cols[authors_fac_unique[a]], lwd=2)
-      points(seq(0, 1, length=n), m_opinion[, a], col=cols[authors_fac_unique[a]], pch=20)
+      
+      # only point when there is an actual data point
+      points(seq(0, 1, length=n)[!is.na(m_dp[, a])], 
+             m_opinion[!is.na(m_dp[, a]), a], 
+             col=cols[authors_fac_unique[a]], 
+             pch=20, 
+             cex = 1.5)
     }
     
     
