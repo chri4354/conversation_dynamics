@@ -3,7 +3,6 @@
 #------------------------------------------------------------------------------+
 #
 #
-#   Varying a sentence by synonyms
 #   2018-June.
 #   Contributors:
 #   1. Nam Le -- University College Dublin
@@ -15,7 +14,7 @@
 #------ Processing the labels of the raw abortion data --------+
 import os
 
-from sentence_varying import vary_sentence
+from sentence_permutation import vary_by_noun
 
 import numpy as np
 np.random.seed(10000)
@@ -44,8 +43,8 @@ print("length of the texts ", len(texts))
 print("length of the labels ", len(labels))
 
 for i in range(len(texts)):
-    varied_sentence1 = vary_sentence(texts[i])
-    varied_sentence2 = vary_sentence(texts[i])
+    varied_sentence1 = vary_by_noun(texts[i])
+    varied_sentence2 = vary_by_noun(texts[i])
     
     texts.append(varied_sentence1)
     labels.append(labels[i])
