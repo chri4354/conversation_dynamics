@@ -3,6 +3,7 @@
 require(data.table)
 library(qgraph)
 
+mainDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_dynamics/target_conversations/"
 figDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_dynamics/target_conversations/figures/"
 
 # ------------------------------------------------------------------------------
@@ -15,8 +16,9 @@ ind_withscores <- grepl("score", files)
 files <- files[ind_withscores] 
 n_files <- length(files)
 
+
 # ------------------------------------------------------------------------------
-# ---------- Load All Chain Data + Predictions ---------------------------------
+# ---------- Pictures of individual Chains -------------------------------------
 # ------------------------------------------------------------------------------
 
 library(plotrix)
@@ -25,6 +27,8 @@ library(RColorBrewer)
 # Settings
 node_radius <- .015
 arrow_size <- .05
+chain_counter <- 1
+l_allChains <- list()
 
 for(cmv in (1:10)[-7]) {
   for(chain in 1:10) {
@@ -104,8 +108,8 @@ for(cmv in (1:10)[-7]) {
                               y = .5, 
                               radius = node_radius, 
                               col = cols[authors_fac[i]])
-                              # border = cols_deltas[i],
-                              # lwd = 1+deltas[i])
+    # border = cols_deltas[i],
+    # lwd = 1+deltas[i])
     for(i in 1:(n-1)) arrows(x0 = x_points[i]+node_radius, 
                              y0 = .5,
                              x1 = x_points[i+1]-node_radius, 
@@ -134,8 +138,35 @@ for(cmv in (1:10)[-7]) {
     
     print(paste0("cmv: ", cmv, " chain: ", chain))
     
+    # Save for statistial analysis
+    l_allChains[[chain_counter]] <- m_opinion
+    chain_counter <- chain_counter + 1
+    
+    
   } # end for: chain
 } # end for: cmv
+
+
+# Export opinion changes; used in ConvergenceAnalysis.R
+saveRDS(l_allChains, file=paste0(mainDir, "files/ChainSummary.RDS"))
+
+
+# ------------------------------------------------------------------------------
+# ---------- Pictures of whole trees -------------------------------------------
+# ------------------------------------------------------------------------------
+
+
+
+
+
+# ------------------------------------------------------------------------------
+# ---------- Pictures of CMV Author opinions -----------------------------------
+# ------------------------------------------------------------------------------
+
+
+
+
+
 
 
 

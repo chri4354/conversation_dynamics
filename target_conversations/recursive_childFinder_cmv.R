@@ -11,6 +11,7 @@ library(readr)
 ## CMV Data
 dataDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/CD_data/"
 mainDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_dynamics/target_conversations/"
+figDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_dynamics/target_conversations/figures/"
 D <- read_tsv(paste0(dataDir, "cmv2017.txt"))
 
 # ------------------------------------------------------------------------------
@@ -110,7 +111,6 @@ k <- 10
 
 for(j in (1:n_cmv)[-7]) {
   
-  
   # ---------- 1) Compute Tree ----------------------------------------
   
   # Select cmv
@@ -144,7 +144,7 @@ for(j in (1:n_cmv)[-7]) {
   
   # ---------- 2) Visualize Tree ----------------------------------------
   
-  pdf(paste0(mainDir, "/output_trees/cmv", j,".pdf"), width = 10, height = 7)
+  pdf(paste0(figDir, "cmv", j,".pdf"), width = 10, height = 7)
   qgraph(out$graph, 
          # labels = out$v_ids_out, 
          labels = out$v_author, 
@@ -152,9 +152,47 @@ for(j in (1:n_cmv)[-7]) {
   mtext(target_cmv, 3, cex=1, line=3)
   dev.off()
   
+  # ---------- 3) Export data of whole Tree ----------------------------------------
+  
+  # ----- 3.1) Whole Tree ----
+  
+  # Subset Data
+  D_ss <- data.frame(matrix(NA, nrow=ncol(out$graph), ncol=13))
+  for(s in 1:ncol(out$graph)) D_ss[s, ] <- D[D$id == out$v_ids_out[s], ]
+  colnames(D_ss) <- colnames(D)
+  
+  deltas <- as.numeric(gsub("([0-9]+).*$", "\\1", D_ss$author_flair_text))
+  D_ss_out <- cbind(D_ss$id, D_ss$author, deltas, D_ss$body)
+  D_ss_out[1, 4] <-  D_ss$selftext[1]
+  colnames(D_ss_out) <- c("id", "author", "deltas", "body")
+  
+  # Save 
+  write.table(D_ss_out, file = paste0(mainDir, "output_trees/cmv" ,j ,"_fulltree.tsv"), 
+              sep = "\t", row.names=FALSE)
   
   
-  # ---------- 3) Export k longest Chains ----------------------------------------
+  # ----- 3.2) Initial Author Data ----
+  
+  author <- out$v_author[1]
+  author_n <- sum(D_ss$author == author)
+  
+  D_author <- data.frame(matrix(NA, nrow=author_n, ncol=13))
+  ind_author <- which(D_ss$author == author)
+  for(s in 1:author_n) D_author[s, ] <- D_ss[ind_author[s], ]
+  colnames(D_author) <- colnames(D_ss)
+  
+  deltas <- as.numeric(gsub("([0-9]+).*$", "\\1", D_author$author_flair_text))
+  D_author_out <- cbind(D_author$id, D_author$author, deltas, D_author$body)
+  D_author_out[1, 4] <-  D_author$selftext[1]
+  colnames(D_author_out) <- c("id", "author", "deltas", "body")
+  
+  # Save 
+  write.table(D_author_out, file = paste0(mainDir, "output_initialauthors/cmv", j, "_initialauthor.tsv"), 
+              sep = "\t", row.names=FALSE)
+  
+  
+  
+  # ---------- 4) Export k longest Chains ----------------------------------------
   
   # Get all Chains
   n <- ncol(out$graph)
