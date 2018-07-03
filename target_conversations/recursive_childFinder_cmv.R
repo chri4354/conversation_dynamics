@@ -183,13 +183,20 @@ for(j in (1:n_cmv)[-7]) {
   colnames(D_ss) <- colnames(D)
   
   deltas <- as.numeric(gsub("([0-9]+).*$", "\\1", D_ss$author_flair_text))
+  
   D_ss_out <- cbind(D_ss$id, D_ss$author, deltas, D_ss$body)
   D_ss_out[1, 4] <-  D_ss$selftext[1]
   colnames(D_ss_out) <- c("id", "author", "deltas", "body")
   
+  # Remove tabs/line breaks
+  body <- D_ss_out[, 4]
+  body_clean <- gsub("\t"," ", body) 
+  body_clean <- gsub("\n"," ", body_clean) 
+  D_ss_out[, 4] <- body_clean
+  
   # Save 
   write.table(D_ss_out, 
-              file = paste0(mainDir, "output_trees/cmv" ,j ,"_fulltree.tsv"), 
+              file = paste0(mainDir, "output_trees/cmv", j, "_fulltree.tsv"), 
               sep = "\t", 
               row.names=FALSE)
   
@@ -208,6 +215,12 @@ for(j in (1:n_cmv)[-7]) {
   D_author_out <- cbind(D_author$id, D_author$author, deltas, D_author$body)
   D_author_out[1, 4] <-  D_author$selftext[1]
   colnames(D_author_out) <- c("id", "author", "deltas", "body")
+  
+  # Remove tabs/line breaks
+  body <- D_author[, 4]
+  body_clean <- gsub("\t"," ", body) 
+  body_clean <- gsub("\n"," ", body_clean) 
+  D_author[, 4] <- body_clean
   
   # Save 
   write.table(D_author_out, 

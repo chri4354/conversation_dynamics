@@ -164,7 +164,6 @@ saveRDS(l_allChains, file=paste0(mainDir, "files/ChainSummary.RDS"))
 dataDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_dynamics/target_conversations/output_trees/"
 
 
-
 # -------- Plotting ------------------------------------------------------------
 
 library(RColorBrewer)
@@ -173,14 +172,24 @@ library(RColorBrewer)
 for(cmv in (1:10)[-7]) {
   
   # Load Tree data
-  D <- fread(paste0(dataDir, "cmv", cmv, "_fulltree_score.tsv"))
+  D <- fread(paste0(mainDir, "output_trees/cmv", cmv, "_fulltree_score.tsv"))
   n <- length(D$median_scores)
   
+  dim(D)
+
   # Load Tree structure
+  out <- readRDS(paste0(mainDir, "files/cmv_", cmv, "_graph.RDS"))
+  
+  ncol(out$graph)
   
   
   # Construct color scheme
-  
+  n <- 100
+  cols <- brewer.pal(n = n, 
+                     name = "RdYlBu")
+  display.brewer.pal(n = n, 
+             name = "RdYlBu")
+  ?display.brewer.pal
   
   # plot graph
   qgraph()
@@ -193,6 +202,10 @@ for(cmv in (1:10)[-7]) {
 ####### DEVVVV
 
 library(grDevices)
+?rasterImage
+
+colfunc <- colorRampPalette(c("red", "blue"))
+cols <- colfunc(100)
 
 layout(matrix(1:2,ncol=2), width = c(2,1),height = c(1,1))
 plot(1:20, 1:20, pch = 19, cex=2, col = colfunc(20))
