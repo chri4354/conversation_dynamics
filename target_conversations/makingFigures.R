@@ -93,10 +93,19 @@ for(cmv in (1:10)[-7]) {
     plot.new()
     plot.window(xlim=c(0,1), ylim=c(0,1))
     x_points <- seq(0, 1, length=n)
+    
+    # deltas <- D$deltas
+    # deltas[is.na(deltas)] <- 0
+    # deltas <- deltas / max(deltas)
+    # cols_deltas <- rep("black", n)
+    # cols_deltas[deltas!=0] <- "gold"
+    
     for(i in 1:n) draw.circle(x = x_points[i],
                               y = .5, 
                               radius = node_radius, 
                               col = cols[authors_fac[i]])
+                              # border = cols_deltas[i],
+                              # lwd = 1+deltas[i])
     for(i in 1:(n-1)) arrows(x0 = x_points[i]+node_radius, 
                              y0 = .5,
                              x1 = x_points[i+1]-node_radius, 
