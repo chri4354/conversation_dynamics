@@ -167,6 +167,7 @@ dataDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_
 # -------- Plotting ------------------------------------------------------------
 
 # Find color scheme
+library(grDevices)
 colfunc <- colorRampPalette(c("red", "blue"))
 cols <- colfunc(100)
 
@@ -185,7 +186,7 @@ for(cmv in (1:10)[-7]) {
   col <- round(D$median_scores*100)
   colors <- cols[col]
   colors[is.na(colors)] <- "white"
-
+  
   # plot graph
   pdf(paste0(figDir, "cmv_", cmv, "_OpinionAsColor.pdf"), width = 10, height = 7)
   
@@ -210,15 +211,6 @@ for(cmv in (1:10)[-7]) {
 } # end for: cmv
 
 
-
-
-####### DEVVVV
-
-library(grDevices)
-
-
-
-
 # ------------------------------------------------------------------------------
 # ---------- Pictures of CMV Author opinions -----------------------------------
 # ------------------------------------------------------------------------------
@@ -230,9 +222,66 @@ dataDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_
 
 # -------- Plotting ------------------------------------------------------------
 
+plot.new()
 
+l_authors <- list()
+counter_a <- 1
 
+# Load Tree data
+for(cmv in (1:10)[-7]) {
+  
+  D <- fread(paste0(mainDir, "output_initialauthors/cmv", cmv, "_initialauthor_score.tsv"))
+  l_authors[[counter_a]] <- D
+  counter_a <- counter_a + 1
+  
+} #end for: cmv
 
+max_length <- max(unlist(lapply(l_authors, nrow)))
+
+pdf(paste0(figDir, "InitialAuthor_All_Trajectories.pdf"), width = 10, height = 4)
+
+# Setup layout
+par(mar=c(2,3,1,1))
+plot.new()
+plot.window(xlim=c(1, max_length), ylim=c(0,1))
+axis(2, c(0, .5, 1), las=2)
+abline(h=c(0, .5, 1), lty=2, col="grey")
+axis(1, c(1, 10, 20, 30, 41))
+
+# Select colors
+cols <- brewer.pal(9, "Paired")
+
+# Plot lines
+for(i in 1:9) {
+  lines(l_authors[[i]]$median_scores, col = cols[i], lwd=2)
+}
+
+dev.off()
+
+# --------- Plot seperately -------
+
+# Plot lines
+for(i in 1:9) {
+  
+  cmv <- (1:10)[-7]
+  
+  pdf(paste0(figDir, "InitialAuthor_cmv", cmv[i], "_Trajectory.pdf"), width = 10, height = 4)
+  
+  # Setup layout
+  par(mar=c(2,3,1,1))
+  plot.new()
+  plot.window(xlim=c(1, max_length), ylim=c(0,1))
+  axis(2, c(0, .5, 1), las=2)
+  abline(h=c(0, .5, 1), lty=2, col="grey")
+  axis(1, c(1, 10, 20, 30, 41))
+  
+  # Select colors
+  cols <- brewer.pal(9, "Paired")
+  
+  lines(l_authors[[i]]$median_scores, col = cols[i], lwd=2)
+  dev.off()
+  
+}
 
 
 
