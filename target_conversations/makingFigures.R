@@ -166,8 +166,11 @@ dataDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_
 
 # -------- Plotting ------------------------------------------------------------
 
-library(RColorBrewer)
+# Find color scheme
+colfunc <- colorRampPalette(c("red", "blue"))
+cols <- colfunc(100)
 
+# Loop over CMVs
 
 for(cmv in (1:10)[-7]) {
   
@@ -175,45 +178,44 @@ for(cmv in (1:10)[-7]) {
   D <- fread(paste0(mainDir, "output_trees/cmv", cmv, "_fulltree_score.tsv"))
   n <- length(D$median_scores)
   
-  dim(D)
-
   # Load Tree structure
   out <- readRDS(paste0(mainDir, "files/cmv_", cmv, "_graph.RDS"))
   
-  ncol(out$graph)
-  
-  
-  # Construct color scheme
-  n <- 100
-  cols <- brewer.pal(n = n, 
-                     name = "RdYlBu")
-  display.brewer.pal(n = n, 
-             name = "RdYlBu")
-  ?display.brewer.pal
-  
+  # Define color vector
+  col <- round(D$median_scores*100)
+  colors <- cols[col]
+  colors[is.na(colors)] <- "white"
+
   # plot graph
-  qgraph()
+  pdf(paste0(figDir, "cmv_", cmv, "_OpinionAsColor.pdf"), width = 10, height = 7)
   
+  layout(matrix(1:2,ncol=2), width = c(4,1), height = c(1,1))
+  colfunc <- colorRampPalette(c("red", "blue"))
   
+  qgraph(out$graph, 
+         color = colors, 
+         labels = out$v_author)
   
-}
+  legend_image <- as.raster(matrix(cols, ncol=1))
+  par(mar = c(2, 0, 2, 0))
+  plot.new()
+  plot.window(xlim=c(-1,2), ylim=c(0,1))
+  text(x=0.5, y = c(0, 1), labels = c("Pro Life", "Pro Choice"))
+  rasterImage(legend_image, .1, .1, .9, .9)
+  
+  dev.off()
+  
+  print(cmv)
+  
+} # end for: cmv
+
+
 
 
 ####### DEVVVV
 
 library(grDevices)
-?rasterImage
 
-colfunc <- colorRampPalette(c("red", "blue"))
-cols <- colfunc(100)
-
-layout(matrix(1:2,ncol=2), width = c(2,1),height = c(1,1))
-plot(1:20, 1:20, pch = 19, cex=2, col = colfunc(20))
-
-legend_image <- as.raster(matrix(colfunc(20), ncol=1))
-plot(c(0,2),c(0,1),type = 'n', axes = F,xlab = '', ylab = '', main = 'legend title')
-text(x=1.5, y = seq(0,1,l=5), labels = seq(0,1,l=5))
-rasterImage(legend_image, 0, 0, 1,1)
 
 
 
