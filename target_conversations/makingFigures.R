@@ -166,8 +166,12 @@ dataDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_
 
 # -------- Plotting ------------------------------------------------------------
 
-library(RColorBrewer)
+# Find color scheme
+library(grDevices)
+colfunc <- colorRampPalette(c("red", "blue"))
+cols <- colfunc(100)
 
+# Loop over CMVs
 
 for(cmv in (1:10)[-7]) {
   
@@ -175,46 +179,36 @@ for(cmv in (1:10)[-7]) {
   D <- fread(paste0(mainDir, "output_trees/cmv", cmv, "_fulltree_score.tsv"))
   n <- length(D$median_scores)
   
-  dim(D)
-
   # Load Tree structure
   out <- readRDS(paste0(mainDir, "files/cmv_", cmv, "_graph.RDS"))
   
-  ncol(out$graph)
-  
-  
-  # Construct color scheme
-  n <- 100
-  cols <- brewer.pal(n = n, 
-                     name = "RdYlBu")
-  display.brewer.pal(n = n, 
-             name = "RdYlBu")
-  ?display.brewer.pal
+  # Define color vector
+  col <- round(D$median_scores*100)
+  colors <- cols[col]
+  colors[is.na(colors)] <- "white"
   
   # plot graph
-  qgraph()
+  pdf(paste0(figDir, "cmv_", cmv, "_OpinionAsColor.pdf"), width = 10, height = 7)
   
+  layout(matrix(1:2,ncol=2), width = c(4,1), height = c(1,1))
+  colfunc <- colorRampPalette(c("red", "blue"))
   
+  qgraph(out$graph, 
+         color = colors, 
+         labels = out$v_author)
   
-}
-
-
-####### DEVVVV
-
-library(grDevices)
-?rasterImage
-
-colfunc <- colorRampPalette(c("red", "blue"))
-cols <- colfunc(100)
-
-layout(matrix(1:2,ncol=2), width = c(2,1),height = c(1,1))
-plot(1:20, 1:20, pch = 19, cex=2, col = colfunc(20))
-
-legend_image <- as.raster(matrix(colfunc(20), ncol=1))
-plot(c(0,2),c(0,1),type = 'n', axes = F,xlab = '', ylab = '', main = 'legend title')
-text(x=1.5, y = seq(0,1,l=5), labels = seq(0,1,l=5))
-rasterImage(legend_image, 0, 0, 1,1)
-
+  legend_image <- as.raster(matrix(cols, ncol=1))
+  par(mar = c(2, 0, 2, 0))
+  plot.new()
+  plot.window(xlim=c(-1,2), ylim=c(0,1))
+  text(x=0.5, y = c(0, 1), labels = c("Pro Life", "Pro Choice"))
+  rasterImage(legend_image, .1, .1, .9, .9)
+  
+  dev.off()
+  
+  print(cmv)
+  
+} # end for: cmv
 
 
 # ------------------------------------------------------------------------------
@@ -228,9 +222,66 @@ dataDir <- "/Volumes/Macintosh HD 2/Dropbox/MyData/_PhD/__projects/conversation_
 
 # -------- Plotting ------------------------------------------------------------
 
+plot.new()
 
+l_authors <- list()
+counter_a <- 1
 
+# Load Tree data
+for(cmv in (1:10)[-7]) {
+  
+  D <- fread(paste0(mainDir, "output_initialauthors/cmv", cmv, "_initialauthor_score.tsv"))
+  l_authors[[counter_a]] <- D
+  counter_a <- counter_a + 1
+  
+} #end for: cmv
 
+max_length <- max(unlist(lapply(l_authors, nrow)))
+
+pdf(paste0(figDir, "InitialAuthor_All_Trajectories.pdf"), width = 10, height = 4)
+
+# Setup layout
+par(mar=c(2,3,1,1))
+plot.new()
+plot.window(xlim=c(1, max_length), ylim=c(0,1))
+axis(2, c(0, .5, 1), las=2)
+abline(h=c(0, .5, 1), lty=2, col="grey")
+axis(1, c(1, 10, 20, 30, 41))
+
+# Select colors
+cols <- brewer.pal(9, "Paired")
+
+# Plot lines
+for(i in 1:9) {
+  lines(l_authors[[i]]$median_scores, col = cols[i], lwd=2)
+}
+
+dev.off()
+
+# --------- Plot seperately -------
+
+# Plot lines
+for(i in 1:9) {
+  
+  cmv <- (1:10)[-7]
+  
+  pdf(paste0(figDir, "InitialAuthor_cmv", cmv[i], "_Trajectory.pdf"), width = 10, height = 4)
+  
+  # Setup layout
+  par(mar=c(2,3,1,1))
+  plot.new()
+  plot.window(xlim=c(1, max_length), ylim=c(0,1))
+  axis(2, c(0, .5, 1), las=2)
+  abline(h=c(0, .5, 1), lty=2, col="grey")
+  axis(1, c(1, 10, 20, 30, 41))
+  
+  # Select colors
+  cols <- brewer.pal(9, "Paired")
+  
+  lines(l_authors[[i]]$median_scores, col = cols[i], lwd=2)
+  dev.off()
+  
+}
 
 
 
