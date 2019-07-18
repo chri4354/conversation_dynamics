@@ -1,0 +1,433 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+# Clear console
+cat("\014") 
+# Clean workspace
+rm(list=ls())
+# set working directory
+setwd('/home/niccolop/git_repos/csss2018/conversation_dynamics/')
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+```{r}
+library(tidyverse)
+library(stm)
+library(stminsights)
+library(quanteda)
+library(lubridate)
+library(googleLanguageR)
+library(data.table)
+theme_set(theme_light())
+
+```
+
+
+```{r}
+gl_auth('/home/niccolop/git_repos/csss2018/conversation_dynamics/conversation-dynamics-93a7f7ed8e1f.json')
+```
+
+Load data
+```{r}
+debates <- fread("./data_files/IrelandParliament/Dail_debates_data/Dail_debates_1919-2013.tab", sep="\t", quote="", header=TRUE, showProgress = TRUE, data.table=FALSE, verbose = TRUE)
+
+```
+
+
+```{r}
+glimpse(debates)
+```
+
+## Work on a tiny dataset 
+
+```{r}
+#data <- rbind(sample_n(debates, 1000),
+#              debates[debates$speech %like% "abort",])
+data <- debates[debates$speech %like% "abort",]
+```
+
+
+## Working with time stamps
+
+First, we convert the time strings to a date format and then create a numerical variable, where the earliest date corresponds to 0. We do so because estimating STM effects doesn't play nicely with `date` variables.
+
+```{r}
+# CTRL/CMD + SHIFT + M for the pipe operator
+data$date <- ymd(data$date)
+min_date <- min(data$date) %>% 
+  as.numeric()
+data$date_num <- as.numeric(data$date) - min_date
+date_table <- data %>% arrange(date_num) %>% select(date, date_num)
+head(date_table, 10)
+```
+
+## scatter plot abortion speeches over time
+```{r}
+ggplot(data = data, aes(date, party_name)) + geom_point()
+```
+
+
+## Preprocess: metro type
+
+```{r}
+data %>% count(party_name)
+```
+
+
+```{r}
+deb_corp <- corpus(data, text_field = 'speech', 
+                 docid_field = 'speechID')
+docvars(deb_corp)$text <- data$speech # we need unprocessed texts later
+ndoc(deb_corp) # no. of documents
+```
+
+
+```{r}
+kwic_deb <- kwic(deb_corp, pattern = c("abortion"),
+                      window = 5) # context window
+head(kwic_deb, 3)
+```
+
+## Tokenization
+
+- Tokens can be created from a corpus or character vector. The documentation (`?tokens()`) illustrates several options, e.g. for the removal of punctuation
+
+```{r}
+deb_tokens <- tokens(deb_corp)
+deb_tokens[[1]][1:20]
+```
+
+
+## More preprocessing
+
+- Multiple preprocessing steps can be chained via the pipe operator, e.g normalizing to lowercase and removing common English stopwords:
+
+```{r}
+deb_tokens <- deb_tokens %>% 
+tokens_tolower() %>% 
+tokens_remove(stopwords('english'), padding = TRUE)
+
+deb_tokens[[1]][1:10]
+```
+
+
+## Detecting collocations
+
+- Collocations (phrases) are sequences of tokens which symbolize shared semantic meaning, e.g. `United States`
+- Quanteda can detect collocations with log-linear models. An important parameter is the minimum collocation frequency, which can be used to fine-tune results
+
+```{r}
+colls <- textstat_collocations(deb_tokens,
+         min_count = 200) # minimum frequency
+deb_tokens <- tokens_compound(deb_tokens, colls, join = FALSE) %>% 
+                tokens_remove('') # remove empty strings
+
+deb_tokens[[1]][1:5]
+```
+
+
+## Document-Feature Matrix (DFM)
+
+- Most models for automated text analysis require matrices as input format
+- A common variant which directrly translates to the bag of words format is the [document term matrix](https://en.wikipedia.org/wiki/Document-term_matrix) (in quanteda: document-feature matrix):
+
+ doc_id     I     like     hate    currywurst
+--------  ---   ------   ------  -------------
+     1     1      1         0         1
+     2     1      0         1         1
+
+## Creating a Document-Feature Matrix (dfm)
+
+- Problem: textual data is highly dimensional -> dfms's potentially grow to millions of rows & columns -> matrices for large text corpora don't fit in memory
+- Features are not evenly distributed (see e.g. [Zipf's law](https://en.wikipedia.org/wiki/Zipf%27s_law)) and most of these cells contain zeroes
+- Solution: Sparse data format, which does not include zero counts. Quanteda natively implements DFM's as [sparse matrices](https://en.wikipedia.org/wiki/Sparse_matrix) 
+
+## DFM's in quanteda
+
+- Quanteda can create DFM's from character vectors, corpora and token objects
+- Preprocessing that does not need to account for word order can also be done during or after the creation of DFM's (see documentation for `tokens()`)
+
+```{r}
+dfm_deb <- dfm(deb_tokens, remove_numbers = TRUE)
+dim(dfm_deb)
+```
+
+
+## More preprocessing - feature trimming
+
+- As an alternative (or complement) to manually defining stopwords, terms occuring in a large proportion of documents can be removed automatically. Rationale: if almost every document includes a term, it is not a useful feature for categorization
+- Very rare terms are often removed, as they are also not very helpful for categorization and can lead to overfitting
+
+```{r}
+dfm_deb <- dfm_deb %>% 
+  dfm_keep(min_nchar = 2) %>% # remove chars with only one character
+  dfm_trim(min_docfreq = 0.002, max_docfreq = 0.50, #2% min, 50% max
+  docfreq_type = 'prop') # proportions instead of counts
+dim(dfm_deb)
+```
+
+
+## Prepare textual data for STM
+
+- You can provide input data for the stm package in several ways:
+
+     - via STM's own functions for text pre-processing
+     - via directly passing quanteda dfm's
+     - using quanteda's `convert()` function to prepare dfm's (recommended option)
+     
+```{r}
+out <- convert(dfm_deb, to = 'stm')
+names(out)
+```
+
+## STM - model fitting 
+
+- For our first model, we will choose 30 topics and include school metro type, teacher gender and  a flexible [spline](https://en.wikipedia.org/wiki/Spline_(mathematics)) for date as prevalence covariates:
+
+```{r, eval = FALSE}
+stm_30 <- stm(documents = out$documents, 
+      vocab = out$vocab,
+      data = out$meta,
+      K = 30, 
+      prevalence = ~ party_name ,
+      verbose = TRUE) # show progress
+
+stm_effects30 <- estimateEffect(1:30 ~ party_name,
+      stmobj = stm_30, metadata = out$meta)
+```
+
+
+
+```{r, eval = FALSE}
+save(out, stm_30, stm_effects30, file = "./data_files/IrelandParliament/stm_debatesAbortion.RData")
+```
+
+# Model validation and interactively exploring STM models
+
+## Interpreting structural topic models - topic proportions
+
+- `plot.STM()` implements several options for model interpretation. 
+- *summary* plots show proportions and the most likely terms for each topic:
+
+
+## Model interpretation - topic proportions
+
+```{r fig.height=5, fig.width=9}
+plot.STM(stm_30, type = 'summary', text.cex = 0.8)
+```
+
+
+## Model interpretation - probability terms
+
+`label` plots show terms for each topic with (again) the most likely terms as a default:
+
+
+## Model interpretation - probability terms
+
+```{r fig.height=4, fig.width=7}
+plot.STM(stm_30, type = 'labels', n = 8, 
+         text.cex = 0.8, width = 100, topics = 1:5)
+```
+
+
+## Model interpretation - frex terms
+
+One strength of STM is that it also offers other metrics for topic terms. `frex` terms are both frequent and exclusive to a topic.
+
+
+## Model interpretation - frex terms
+
+```{r fig.height=4, fig.width=7}
+plot.STM(stm_30, type = 'labels', n = 8, text.cex = 0.8, 
+         width = 100, topics = 1:5, labeltype = 'frex')
+```
+
+
+## Model interpretation - don't rely on terms only
+
+- Assigning labels for topics only by looking at the most likely terms is generally not a good idea
+- Sometimes these terms contain domain-specific stop words. Sometimes they are hard to make sense of by themselves
+- Recommendation: 
+
+    - use probability (most likely) terms
+    - use frex terms
+    - **qualitatively examine representative documents**
+    
+    
+## Model interpretation - representative documents
+
+- STM allows to find representative (unprocessed) documents for each topic with `findThoughts()`, which can then be plotted with `plotQuote()`: 
+
+```{r }
+thoughts <- findThoughts(stm_30, 
+     texts = out$meta$text, # unprocessed documents
+     topics = 1:3,  n = 2) # topics and number of documents
+```
+
+## Model interpretation - representative documents
+
+```{r fig.height=5, fig.width=9}
+plotQuote(thoughts$docs[[3]][1], # topic 3
+          width = 80, text.cex = 0.75) 
+```
+
+## Model intepretation - perspective plot
+
+- It is also possible to visualize differences in word usage between two topics:
+
+```{r fig.height=5, fig.width=8}
+plot.STM(stm_30, type = 'perspective', topics = c(7,26))
+```
+
+
+## Interactive model validation - stminsights
+
+- You can interactively validate and explore structural topic models using the R package *stminsights*. What you need:
+
+    - one or several stm models and corresponding effect estimates
+    - the `out` object used to fit the models which includes documents, vocabulary and meta-data
+- The example `stm_donor.RData` includes all required objects
+
+
+```{r eval=FALSE, message=FALSE, warning=FALSE}
+run_stminsights()
+```
+
+# Interpreting and visualizing prevalence and content effects
+
+- You already estimated a model with prevalence effects. Now we'll see how to also estimate content effects and how to visualize prevalence and content effects
+
+- There are several options for interpreting and visualizing effects:
+  
+    - using functions of the STM package
+    - using stminsights function `get_effects()`
+    - usting stminsights interactive mode
+
+## Prevalence effects (stm package)
+
+## Options for visualizing prevalence effects
+
+- Prevalence covariates affect topic proportions 
+- They can be visualized in three ways:
+
+    - `pointestimate`: pointestimates for categorical variables
+    - `difference`: differences between topic proportions for two categories of one variable
+    - `continuous`: line plots for continuous variables
+- You can also visualize interaction effects if you integrated them in your STM model (see `?plot.estimateEffect()`)
+    
+## Prevalence effects - pointestimate
+
+```{r}
+plot.estimateEffect(stm_effects30, topic = 27, 
+            covariate = 'party_name', method = 'pointestimate')
+```
+
+
+## Prevalence effects - difference
+
+```{r}
+plot.estimateEffect(stm_effects30, covariate = "party_name", 
+                    topics = c(5:10), method = "difference",
+                    model = stm_30, # to show labels alongside
+                    cov.value1 = "Female", cov.value2 = "Male",
+                    xlab = "Male <---> Female", xlim = c(-0.08, 0.08),
+                    labeltype = "frex", n = 3, 
+                    width = 100,  verbose.labels = FALSE)
+```
+
+## Prevalence effects - continuous
+
+```{r}
+plot.estimateEffect(stm_effects30, covariate = "date_num", 
+                    topics = c(9:10), method = "continuous")
+```
+
+## Prevalence effects with stminsights
+
+- You can use `get_effects()` to store prevalence effects in a tidy data frame:
+
+```{r}
+gender_effects <- get_effects(estimates = stm_effects30,
+                      variable = 'gender',
+                      type = 'pointestimate')
+
+date_effects <- get_effects(estimates = stm_effects30,
+                      variable = 'date_num',
+                      type = 'continuous')
+```
+
+- Afterwards, effects can for instance be visualized with `ggplot2`
+
+## Prevalence effects with stminsights - categorical
+
+```{r}
+gender_effects %>% filter(topic == 3) %>%
+ggplot(aes(x = value, y = proportion)) + geom_point() +
+ geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1) +
+ coord_flip() + labs(x = 'Gender', y = 'Topic Proportion')
+```
+
+## Prevalence effects with stminsights - continuous (date)
+
+- STM doesn't work well with visualzing continous date variables.
+- For visualization purposes, we can convert our numeric date identifier back to original form:
+
+```{r message=FALSE, warning=FALSE}
+date_effects <- date_effects %>% 
+  mutate(date_num = round(value, 0))  %>% 
+  left_join(out$meta %>% select(date, date_num)) %>% distinct()
+```
+
+## Prevalence effects with stminsights - continuous (date)
+
+```{r fig.height=3, fig.width=7}
+date_effects %>% filter(topic %in% c(9,10)) %>% 
+       ggplot(aes(x = date, y = proportion, 
+                  group = topic, color = topic, fill = topic)) +
+  geom_line() + scale_x_date(date_break = '3 months', date_labels = "%b/%y") + 
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Translate gaelic text into English CAREFUL! PAID SERVICE
+
+```{r}
+df <- gl_translate_detect(data$speech[1])
+```
+```{r}
+df$
+```
+
+```{r}
+gl_translate(data$speech[1], target = "en", format = "text")
+```
+
